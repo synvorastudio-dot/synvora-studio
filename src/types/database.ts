@@ -89,6 +89,56 @@ export type Database = {
           },
         ];
       };
+      project_proposals: {
+        Row: {
+          id: string;
+          project_brief_id: string;
+          title: string;
+          total_price_eur: number;
+          deposit_amount_eur: number;
+          estimated_delivery: string;
+          proposal_status: "draft" | "ready" | "accepted" | "paid";
+          stripe_checkout_session_id: string | null;
+          payment_status: "unpaid" | "pending" | "paid" | "failed";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_brief_id: string;
+          title: string;
+          total_price_eur: number;
+          deposit_amount_eur: number;
+          estimated_delivery: string;
+          proposal_status?: "draft" | "ready" | "accepted" | "paid";
+          stripe_checkout_session_id?: string | null;
+          payment_status?: "unpaid" | "pending" | "paid" | "failed";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          project_brief_id?: string;
+          title?: string;
+          total_price_eur?: number;
+          deposit_amount_eur?: number;
+          estimated_delivery?: string;
+          proposal_status?: "draft" | "ready" | "accepted" | "paid";
+          stripe_checkout_session_id?: string | null;
+          payment_status?: "unpaid" | "pending" | "paid" | "failed";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "project_proposals_project_brief_id_fkey";
+            columns: ["project_brief_id"];
+            isOneToOne: true;
+            referencedRelation: "project_briefs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

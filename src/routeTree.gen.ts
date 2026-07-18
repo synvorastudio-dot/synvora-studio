@@ -29,6 +29,7 @@ import { Route as PortfolioSlugRouteImport } from './routes/portfolio.$slug'
 import { Route as MyProjectProjectIdRouteImport } from './routes/my-project.$projectId'
 import { Route as IndustriesSlugRouteImport } from './routes/industries.$slug'
 import { Route as ApiConsultantRouteImport } from './routes/api/consultant'
+import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
 
 const WhySynvoraRoute = WhySynvoraRouteImport.update({
   id: '/why-synvora',
@@ -130,6 +131,11 @@ const ApiConsultantRoute = ApiConsultantRouteImport.update({
   path: '/api/consultant',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
+  id: '/api/stripe/webhook',
+  path: '/api/stripe/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -152,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/industries/': typeof IndustriesIndexRoute
   '/my-project/': typeof MyProjectIndexRoute
   '/portfolio/': typeof PortfolioIndexRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -171,6 +178,7 @@ export interface FileRoutesByTo {
   '/industries': typeof IndustriesIndexRoute
   '/my-project': typeof MyProjectIndexRoute
   '/portfolio': typeof PortfolioIndexRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -194,6 +202,7 @@ export interface FileRoutesById {
   '/industries/': typeof IndustriesIndexRoute
   '/my-project/': typeof MyProjectIndexRoute
   '/portfolio/': typeof PortfolioIndexRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -218,6 +227,7 @@ export interface FileRouteTypes {
     | '/industries/'
     | '/my-project/'
     | '/portfolio/'
+    | '/api/stripe/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -237,6 +247,7 @@ export interface FileRouteTypes {
     | '/industries'
     | '/my-project'
     | '/portfolio'
+    | '/api/stripe/webhook'
   id:
     | '__root__'
     | '/'
@@ -259,6 +270,7 @@ export interface FileRouteTypes {
     | '/industries/'
     | '/my-project/'
     | '/portfolio/'
+    | '/api/stripe/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -276,6 +288,7 @@ export interface RootRouteChildren {
   TemplatesRoute: typeof TemplatesRoute
   WhySynvoraRoute: typeof WhySynvoraRoute
   ApiConsultantRoute: typeof ApiConsultantRoute
+  ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -420,6 +433,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiConsultantRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/stripe/webhook': {
+      id: '/api/stripe/webhook'
+      path: '/api/stripe/webhook'
+      fullPath: '/api/stripe/webhook'
+      preLoaderRoute: typeof ApiStripeWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -480,6 +500,7 @@ const rootRouteChildren: RootRouteChildren = {
   TemplatesRoute: TemplatesRoute,
   WhySynvoraRoute: WhySynvoraRoute,
   ApiConsultantRoute: ApiConsultantRoute,
+  ApiStripeWebhookRoute: ApiStripeWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -236,6 +236,7 @@ export function formatCompletionDate(isoDate: string | null): string | null {
 }
 
 export const BRIEF_RECEIVED_STAGE_ID: ClientProjectStageId = "brief_received";
+export const DISCOVERY_STAGE_ID: ClientProjectStageId = "discovery";
 
 export function createBriefReceivedProgressInsert(
   projectBriefId: string,

@@ -1,5 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import type { CSSProperties } from "react";
+import { useEffect, useRef } from "react";
 import {
   AlertCircle,
   ArrowLeft,
@@ -10,6 +11,7 @@ import {
   RefreshCw,
   Sparkles,
 } from "lucide-react";
+import { ProposalPaymentSection } from "@/components/client/ProposalPaymentSection";
 import { ProjectProgressBar } from "@/components/client/ProjectProgressBar";
 import {
   formatCompletionDate,
@@ -19,9 +21,26 @@ import {
   type ClientProjectStageView,
   type ProjectBriefRow,
 } from "@/lib/client-project";
+import type { ProjectProposalRow } from "@/lib/project-proposal";
 import { getClientProjectDashboard } from "@/lib/project-progress.functions";
+import { confirmStripeCheckoutSession } from "@/lib/stripe-checkout.functions";
+
+type ProjectSearch = {
+  payment?: "success" | "cancelled";
+  session_id?: string;
+};
 
 export const Route = createFileRoute("/my-project/$projectId")({
+  validateSearch: (search: Record<string, unknown>): ProjectSearch => ({
+    payment:
+      search.payment === "success" || search.payment === "cancelled"
+        ? search.payment
+        : undefined,
+    session_id:
+      typeof search.session_id === "string" && search.session_id.length > 0
+        ? search.session_id
+        : undefined,
+  }),
   loader: async ({ params }) => {
     const dashboard = await getClientProjectDashboard({
       data: { projectId: params.projectId },
@@ -55,13 +74,37 @@ export const Route = createFileRoute("/my-project/$projectId")({
 });
 
 function ClientProjectDashboard() {
-  const { project, stages } = Route.useLoaderData() as {
+  const { projectId } = Route.useParams();
+  const search = Route.useSearch();
+  const router = Route.useRouter();
+  const confirmedSessionRef = useRef<string | null>(null);
+  const { project, stages, proposal } = Route.useLoaderData() as {
     project: ProjectBriefRow;
     stages: ClientProjectStageView[];
+    proposal: ProjectProposalRow | null;
   };
   const statusLabel = getCurrentStageLabel(stages);
   const overallProgress = getOverallProgress(stages);
   const receivedDate = new Date(project.received_at);
+
+  useEffect(() => {
+    if (search.payment !== "success" || !search.session_id) return;
+    if (confirmedSessionRef.current === search.session_id) return;
+
+    confirmedSessionRef.current = search.session_id;
+
+    void confirmStripeCheckoutSession({
+      data: {
+        projectId,
+        sessionId: search.session_id,
+      },
+    })
+      .then(() => router.invalidate())
+      .catch((error) => {
+        console.error("[stripe] payment confirmation failed", error);
+        confirmedSessionRef.current = null;
+      });
+  }, [projectId, router, search.payment, search.session_id]);
 
   return (
     <main className="relative pt-28 pb-24 md:pt-32">
@@ -135,6 +178,12 @@ function ClientProjectDashboard() {
               </p>
             </div>
           </section>
+
+          <ProposalPaymentSection
+            projectId={project.project_id}
+            proposal={proposal}
+            paymentBanner={search.payment ?? null}
+          />
 
           {/* Progress timeline */}
           <section className="relative overflow-hidden rounded-3xl glass-strong p-6 md:p-8">

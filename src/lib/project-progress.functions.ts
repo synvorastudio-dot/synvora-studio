@@ -9,6 +9,8 @@ import {
   type ProjectBriefRow,
   type ProjectProgressRow,
 } from "@/lib/client-project";
+import type { ProjectProposalRow } from "@/lib/project-proposal";
+import { fetchProjectProposal } from "@/lib/stripe/fulfillment";
 import {
   ensureProjectProgressSchema,
   isMissingProjectProgressTableError,
@@ -28,6 +30,7 @@ const projectIdSchema = z.object({
 export type ClientProjectDashboardData = {
   project: ProjectBriefRow;
   stages: ClientProjectStageView[];
+  proposal: ProjectProposalRow | null;
 };
 
 async function fetchProjectBrief(projectId: string): Promise<ProjectBriefRow | null> {
@@ -134,6 +137,7 @@ export const getClientProjectDashboard = createServerFn({ method: "GET" })
 
     const progressRows = await ensureInitialProgress(project);
     const stages = buildStageTimeline(progressRows, project.received_at);
+    const proposal = await fetchProjectProposal(project.id);
 
-    return { project, stages };
+    return { project, stages, proposal };
   });
