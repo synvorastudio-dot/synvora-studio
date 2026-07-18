@@ -2,6 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseServerConfigured } from "@/lib/supabase/env";
+import {
+  BRIEF_RECEIVED_STAGE_ID,
+  createBriefReceivedProgressInsert,
+} from "@/lib/client-project";
 
 // ————————————————————————————————————————————————————————————————
 // Schema — server-side validation of the full project brief
@@ -109,18 +113,30 @@ export const submitProjectBrief = createServerFn({ method: "POST" })
 
     if (isSupabaseServerConfigured()) {
       const supabase = createServerSupabaseClient();
-      const { error } = await supabase.from("project_briefs").insert({
-        project_id: projectId,
-        received_at: receivedAt,
-        summary,
-        brief: payload.brief,
-        current_stage_id: "submitted",
-        contact_email: data.contact.email,
-      });
+      const { data: briefRow, error } = await supabase
+        .from("project_briefs")
+        .insert({
+          project_id: projectId,
+          received_at: receivedAt,
+          summary,
+          brief: payload.brief,
+          current_stage_id: BRIEF_RECEIVED_STAGE_ID,
+          contact_email: data.contact.email,
+        })
+        .select("id")
+        .single();
 
       if (error) {
         console.error("[project-brief] Supabase insert failed", error);
         throw new Error("Unable to save your project brief. Please try again.");
+      }
+
+      const { error: progressError } = await supabase
+        .from("project_progress")
+        .insert(createBriefReceivedProgressInsert(briefRow.id, receivedAt));
+
+      if (progressError) {
+        console.error("[project-brief] progress seed failed", progressError);
       }
     } else {
       console.warn(

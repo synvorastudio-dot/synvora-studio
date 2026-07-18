@@ -45,6 +45,50 @@ export type Database = {
         };
         Relationships: [];
       };
+      project_progress: {
+        Row: {
+          id: string;
+          project_brief_id: string;
+          stage_id: string;
+          status: "completed" | "in_progress" | "upcoming";
+          description: string;
+          progress_percentage: number;
+          completed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_brief_id: string;
+          stage_id: string;
+          status?: "completed" | "in_progress" | "upcoming";
+          description: string;
+          progress_percentage?: number;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          project_brief_id?: string;
+          stage_id?: string;
+          status?: "completed" | "in_progress" | "upcoming";
+          description?: string;
+          progress_percentage?: number;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "project_progress_project_brief_id_fkey";
+            columns: ["project_brief_id"];
+            isOneToOne: false;
+            referencedRelation: "project_briefs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

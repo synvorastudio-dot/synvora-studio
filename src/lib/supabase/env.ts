@@ -8,6 +8,13 @@ function readProcessEnv(name: string): string | undefined {
   return value && value.length > 0 ? value : undefined;
 }
 
+export function getSupabaseProjectRef(): string | undefined {
+  const url = resolveSupabaseUrl();
+  if (!url) return undefined;
+  const match = url.match(/https:\/\/([^.]+)\.supabase\.co/);
+  return match?.[1];
+}
+
 function resolveSupabaseUrl(): string | undefined {
   if (isServerRuntime()) {
     // Server functions and loaders must use runtime env (Lovable/Nitro injects these).

@@ -1,4 +1,5 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import type { CSSProperties } from "react";
 import {
   AlertCircle,
   ArrowLeft,
@@ -9,21 +10,24 @@ import {
   RefreshCw,
   Sparkles,
 } from "lucide-react";
+import { ProjectProgressBar } from "@/components/client/ProjectProgressBar";
 import {
-  CLIENT_PROJECT_STAGES,
-  getClientStageIndex,
-  getClientStatusLabel,
+  formatCompletionDate,
+  formatStageStatus,
+  getCurrentStageLabel,
+  getOverallProgress,
+  type ClientProjectStageView,
   type ProjectBriefRow,
 } from "@/lib/client-project";
-import { getProjectBriefByProjectId } from "@/lib/project-brief-query.functions";
+import { getClientProjectDashboard } from "@/lib/project-progress.functions";
 
 export const Route = createFileRoute("/my-project/$projectId")({
   loader: async ({ params }) => {
-    const project = await getProjectBriefByProjectId({
+    const dashboard = await getClientProjectDashboard({
       data: { projectId: params.projectId },
     });
-    if (!project) throw notFound();
-    return { project };
+    if (!dashboard) throw notFound();
+    return dashboard;
   },
   head: ({ loaderData }) => {
     const projectId = loaderData?.project.project_id ?? "Project";
@@ -51,9 +55,12 @@ export const Route = createFileRoute("/my-project/$projectId")({
 });
 
 function ClientProjectDashboard() {
-  const { project } = Route.useLoaderData() as { project: ProjectBriefRow };
-  const currentIdx = getClientStageIndex(project.current_stage_id);
-  const statusLabel = getClientStatusLabel(project.current_stage_id);
+  const { project, stages } = Route.useLoaderData() as {
+    project: ProjectBriefRow;
+    stages: ClientProjectStageView[];
+  };
+  const statusLabel = getCurrentStageLabel(stages);
+  const overallProgress = getOverallProgress(stages);
   const receivedDate = new Date(project.received_at);
 
   return (
@@ -71,7 +78,7 @@ function ClientProjectDashboard() {
         <header className="mx-auto mt-8 max-w-3xl text-center md:mt-10">
           <div className="inline-flex items-center gap-1.5 rounded-full hairline bg-white/[0.03] px-3 py-1 text-[10.5px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
             <Sparkles className="h-3 w-3 text-[var(--electric)]" />
-            Client Project Dashboard
+            Client Portal
           </div>
           <h1 className="mt-4 font-display text-[30px] leading-tight tracking-[-0.02em] text-gradient sm:text-[38px] md:text-[44px]">
             Your Synvora Project
@@ -136,30 +143,31 @@ function ClientProjectDashboard() {
               subtitle="Track every stage from brief to delivery."
             />
 
-            {/* Desktop horizontal timeline */}
-            <ol className="mt-8 hidden lg:grid lg:grid-cols-6 lg:gap-3">
-              {CLIENT_PROJECT_STAGES.map((stage, i) => {
-                const state =
-                  i < currentIdx ? "done" : i === currentIdx ? "current" : "upcoming";
-                return (
-                  <HorizontalStage key={stage.id} stage={stage} state={state} index={i + 1} />
-                );
-              })}
+            <ProjectProgressBar value={overallProgress} className="relative mt-8" />
+
+            {/* Desktop timeline */}
+            <ol className="mt-8 hidden gap-3 xl:grid xl:grid-cols-4">
+              {stages.map((stage, i) => (
+                <HorizontalStage
+                  key={stage.id}
+                  stage={stage}
+                  index={i + 1}
+                  style={{ animationDelay: `${i * 70}ms` }}
+                />
+              ))}
             </ol>
 
             {/* Mobile / tablet vertical timeline */}
-            <ol className="relative mt-6 space-y-4 lg:hidden">
-              {CLIENT_PROJECT_STAGES.map((stage, i) => {
-                const state =
-                  i < currentIdx ? "done" : i === currentIdx ? "current" : "upcoming";
-                const isLast = i === CLIENT_PROJECT_STAGES.length - 1;
+            <ol className="relative mt-8 space-y-4 xl:hidden">
+              {stages.map((stage, i) => {
+                const isLast = i === stages.length - 1;
                 return (
                   <StageRow
                     key={stage.id}
                     index={i + 1}
                     stage={stage}
-                    state={state}
                     isLast={isLast}
+                    style={{ animationDelay: `${i * 70}ms` }}
                   />
                 );
               })}
@@ -315,31 +323,70 @@ function SectionTitle({ title, subtitle }: { title: string; subtitle: string }) 
   );
 }
 
+function stageCardClass(status: ClientProjectStageView["status"]) {
+  return status === "in_progress"
+    ? "border-[color:var(--electric)] bg-[oklch(0.72_0.22_250/0.05)]"
+    : status === "completed"
+      ? "border-[color:var(--hairline-strong)] bg-[var(--surface)]"
+      : "border-[var(--hairline)] bg-[var(--surface)]";
+}
+
+function stageDotClass(status: ClientProjectStageView["status"]) {
+  return status === "completed"
+    ? "border-[color:var(--electric)] bg-[var(--electric)] text-black"
+    : status === "in_progress"
+      ? "border-[color:var(--electric)] bg-[oklch(0.72_0.22_250/0.15)] text-[var(--electric)] shadow-[0_0_24px_-6px_var(--electric)]"
+      : "border-[var(--hairline-strong)] bg-[var(--surface)] text-muted-foreground";
+}
+
+function StageMeta({
+  stage,
+  compact = false,
+}: {
+  stage: ClientProjectStageView;
+  compact?: boolean;
+}) {
+  const completionDate = formatCompletionDate(stage.completedAt);
+
+  return (
+    <div className={`mt-3 space-y-2 ${compact ? "mt-2" : ""}`}>
+      <div className="flex items-center justify-between gap-2 text-[10.5px] uppercase tracking-[0.16em] text-muted-foreground">
+        <span>{formatStageStatus(stage.status)}</span>
+        <span>{stage.progressPercentage}%</span>
+      </div>
+      <div className="h-1 overflow-hidden rounded-full bg-[var(--surface-elevated)]">
+        <div
+          className="h-full rounded-full bg-[var(--electric)] transition-[width] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]"
+          style={{ width: `${stage.progressPercentage}%` }}
+        />
+      </div>
+      {completionDate ? (
+        <div className="text-[11px] text-muted-foreground">Completed {completionDate}</div>
+      ) : (
+        <div className="text-[11px] text-muted-foreground">{stage.duration}</div>
+      )}
+    </div>
+  );
+}
+
 function StageRow({
   index,
   stage,
-  state,
   isLast,
+  style,
 }: {
   index: number;
-  stage: (typeof CLIENT_PROJECT_STAGES)[number];
-  state: "done" | "current" | "upcoming";
+  stage: ClientProjectStageView;
   isLast: boolean;
+  style?: CSSProperties;
 }) {
-  const dot =
-    state === "done"
-      ? "border-[color:var(--electric)] bg-[var(--electric)] text-black"
-      : state === "current"
-        ? "border-[color:var(--electric)] bg-[oklch(0.72_0.22_250/0.15)] text-[var(--electric)] shadow-[0_0_24px_-6px_var(--electric)]"
-        : "border-[var(--hairline-strong)] bg-[var(--surface)] text-muted-foreground";
-
   return (
-    <li className="relative flex gap-4">
+    <li className="relative flex animate-fade-up gap-4" style={style}>
       <div className="flex flex-col items-center">
         <span
-          className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border transition ${dot}`}
+          className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border transition ${stageDotClass(stage.status)}`}
         >
-          {state === "done" ? (
+          {stage.status === "completed" ? (
             <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
           ) : (
             <Circle className="h-2 w-2 fill-current" strokeWidth={0} />
@@ -348,28 +395,15 @@ function StageRow({
         {!isLast && <span className="mt-1 w-px flex-1 bg-[var(--hairline)]" />}
       </div>
       <div
-        className={`flex-1 rounded-2xl border p-4 transition ${
-          state === "current"
-            ? "border-[color:var(--electric)] bg-[oklch(0.72_0.22_250/0.05)]"
-            : "border-[var(--hairline)] bg-[var(--surface)]"
-        } ${isLast ? "" : "mb-1"}`}
+        className={`flex-1 rounded-2xl border p-4 transition ${stageCardClass(stage.status)} ${isLast ? "" : "mb-1"}`}
       >
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <div className="font-display text-[14.5px] tracking-[-0.01em] text-foreground">
-            <span className="text-muted-foreground">0{index}.</span> {stage.label}
-          </div>
-          <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-            {state === "done"
-              ? "Completed"
-              : state === "current"
-                ? "In progress"
-                : "Upcoming"}{" "}
-            · {stage.duration}
-          </span>
+        <div className="font-display text-[14.5px] tracking-[-0.01em] text-foreground">
+          <span className="text-muted-foreground">0{index}.</span> {stage.label}
         </div>
         <p className="mt-1.5 text-[13px] leading-relaxed text-foreground/80">
           {stage.description}
         </p>
+        <StageMeta stage={stage} compact />
       </div>
     </li>
   );
@@ -378,31 +412,21 @@ function StageRow({
 function HorizontalStage({
   index,
   stage,
-  state,
+  style,
 }: {
   index: number;
-  stage: (typeof CLIENT_PROJECT_STAGES)[number];
-  state: "done" | "current" | "upcoming";
+  stage: ClientProjectStageView;
+  style?: CSSProperties;
 }) {
-  const dot =
-    state === "done"
-      ? "border-[color:var(--electric)] bg-[var(--electric)] text-black"
-      : state === "current"
-        ? "border-[color:var(--electric)] bg-[oklch(0.72_0.22_250/0.15)] text-[var(--electric)] shadow-[0_0_24px_-6px_var(--electric)]"
-        : "border-[var(--hairline-strong)] bg-[var(--surface)] text-muted-foreground";
-
   return (
     <li
-      className={`flex flex-col rounded-2xl border p-4 transition ${
-        state === "current"
-          ? "border-[color:var(--electric)] bg-[oklch(0.72_0.22_250/0.05)]"
-          : "border-[var(--hairline)] bg-[var(--surface)]"
-      }`}
+      className={`flex animate-fade-up flex-col rounded-2xl border p-4 transition ${stageCardClass(stage.status)}`}
+      style={style}
     >
       <span
-        className={`grid h-8 w-8 place-items-center rounded-full border ${dot}`}
+        className={`grid h-8 w-8 place-items-center rounded-full border ${stageDotClass(stage.status)}`}
       >
-        {state === "done" ? (
+        {stage.status === "completed" ? (
           <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
         ) : (
           <Circle className="h-2 w-2 fill-current" strokeWidth={0} />
@@ -414,13 +438,7 @@ function HorizontalStage({
       <p className="mt-1.5 flex-1 text-[11.5px] leading-relaxed text-foreground/75">
         {stage.description}
       </p>
-      <span className="mt-3 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-        {state === "done"
-          ? "Done"
-          : state === "current"
-            ? "In progress"
-            : "Upcoming"}
-      </span>
+      <StageMeta stage={stage} compact />
     </li>
   );
 }
