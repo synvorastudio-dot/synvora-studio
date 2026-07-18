@@ -10,7 +10,7 @@ import {
   type ProjectProgressRow,
 } from "@/lib/client-project";
 import type { ProjectProposalRow } from "@/lib/project-proposal";
-import { fetchProjectProposal } from "@/lib/stripe/fulfillment";
+import { ensureProjectProposal } from "@/lib/project-proposal.functions";
 import {
   ensureProjectProgressSchema,
   isMissingProjectProgressTableError,
@@ -137,7 +137,7 @@ export const getClientProjectDashboard = createServerFn({ method: "GET" })
 
     const progressRows = await ensureInitialProgress(project);
     const stages = buildStageTimeline(progressRows, project.received_at);
-    const proposal = await fetchProjectProposal(project.id);
+    const proposal = await ensureProjectProposal(project.id, project.brief);
 
     return { project, stages, proposal };
   });

@@ -6,6 +6,7 @@ import {
   BRIEF_RECEIVED_STAGE_ID,
   createBriefReceivedProgressInsert,
 } from "@/lib/client-project";
+import { createProjectProposalFromBrief } from "@/lib/project-proposal.functions";
 
 // ————————————————————————————————————————————————————————————————
 // Schema — server-side validation of the full project brief
@@ -137,6 +138,12 @@ export const submitProjectBrief = createServerFn({ method: "POST" })
 
       if (progressError) {
         console.error("[project-brief] progress seed failed", progressError);
+      }
+
+      try {
+        await createProjectProposalFromBrief(briefRow.id, data);
+      } catch (proposalError) {
+        console.error("[project-brief] proposal generation failed", proposalError);
       }
     } else {
       console.warn(

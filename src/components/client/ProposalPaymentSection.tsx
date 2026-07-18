@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CreditCard, Loader2, ShieldCheck, Sparkles } from "lucide-react";
+import { CheckCircle2, CreditCard, Loader2, ShieldCheck, Sparkles } from "lucide-react";
 import {
   formatEur,
   getPaymentStatusLabel,
@@ -113,6 +113,21 @@ export function ProposalPaymentSection({
 
       {showProposal && (
         <div className="relative mt-8 space-y-6">
+          {isPaid && (
+            <div className="flex flex-col items-center rounded-2xl border border-[color:var(--electric)] bg-[oklch(0.72_0.22_250/0.08)] px-6 py-8 text-center">
+              <div className="grid h-14 w-14 place-items-center rounded-full border border-[color:var(--electric)] bg-[var(--electric)] text-black">
+                <CheckCircle2 className="h-7 w-7" strokeWidth={2} />
+              </div>
+              <div className="mt-4 font-display text-[24px] tracking-[-0.02em] text-electric-gradient">
+                Paid
+              </div>
+              <p className="mt-2 max-w-md text-[13px] leading-relaxed text-foreground/80">
+                Your deposit has been received. Synvora has activated Discovery for
+                your project.
+              </p>
+            </div>
+          )}
+
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <div className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
@@ -122,8 +137,14 @@ export function ProposalPaymentSection({
                 {proposal.title}
               </h3>
             </div>
-            <span className="inline-flex items-center rounded-full hairline bg-white/[0.03] px-3 py-1 text-[11px] font-medium text-foreground/85">
-              {getProposalStatusLabel(proposal)}
+            <span
+              className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-medium ${
+                isPaid
+                  ? "border border-[color:var(--electric)] bg-[oklch(0.72_0.22_250/0.12)] text-foreground"
+                  : "hairline bg-white/[0.03] text-foreground/85"
+              }`}
+            >
+              {isPaid ? "Paid" : getProposalStatusLabel(proposal)}
             </span>
           </div>
 
@@ -135,7 +156,7 @@ export function ProposalPaymentSection({
             <MetricCard
               label="Deposit due now"
               value={formatEur(proposal.deposit_amount_eur)}
-              highlight
+              highlight={!isPaid}
             />
             <MetricCard label="Delivery estimate" value={proposal.estimated_delivery} />
           </div>
@@ -143,7 +164,11 @@ export function ProposalPaymentSection({
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl hairline bg-[var(--surface)] px-4 py-3">
             <div className="text-[12px] text-muted-foreground">
               Payment status:{" "}
-              <span className="text-foreground/90">
+              <span
+                className={
+                  isPaid ? "font-medium text-[var(--electric)]" : "text-foreground/90"
+                }
+              >
                 {getPaymentStatusLabel(proposal.payment_status)}
               </span>
             </div>

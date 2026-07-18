@@ -62,10 +62,14 @@ export const createStripeCheckoutSession = createServerFn({ method: "POST" })
     const successUrl = `${origin}/my-project/${data.projectId}?payment=success&session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${origin}/my-project/${data.projectId}?payment=cancelled`;
 
+    const briefPayload = project.brief as { contact?: { email?: string } } | null;
+    const customerEmail = briefPayload?.contact?.email;
+
     const stripe = createStripeClient();
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       currency: "eur",
+      customer_email: customerEmail,
       line_items: [
         {
           quantity: 1,

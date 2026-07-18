@@ -99,7 +99,15 @@ function ClientProjectDashboard() {
         sessionId: search.session_id,
       },
     })
-      .then(() => router.invalidate())
+      .then(() => {
+        void router.invalidate();
+        router.navigate({
+          to: "/my-project/$projectId",
+          params: { projectId },
+          search: { payment: "success" },
+          replace: true,
+        });
+      })
       .catch((error) => {
         console.error("[stripe] payment confirmation failed", error);
         confirmedSessionRef.current = null;

@@ -116,6 +116,32 @@ export async function fulfillProposalPayment(
   }
 }
 
+export async function resetProposalPaymentToUnpaid(proposalId: string): Promise<void> {
+  const supabase = createServerSupabaseClient();
+  const { error } = await supabase
+    .from("project_proposals")
+    .update({ payment_status: "unpaid" })
+    .eq("id", proposalId)
+    .in("payment_status", ["pending", "failed"]);
+
+  if (error) {
+    console.error("[stripe] reset payment status failed", error);
+  }
+}
+
+export async function markProposalPaymentFailed(proposalId: string): Promise<void> {
+  const supabase = createServerSupabaseClient();
+  const { error } = await supabase
+    .from("project_proposals")
+    .update({ payment_status: "failed" })
+    .eq("id", proposalId)
+    .neq("payment_status", "paid");
+
+  if (error) {
+    console.error("[stripe] failed payment update failed", error);
+  }
+}
+
 export async function markProposalPaymentPending(
   proposalId: string,
   checkoutSessionId: string,

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import Stripe from "stripe";
-import { fulfillProposalPayment } from "@/lib/stripe/fulfillment";
+import { fulfillProposalPayment, markProposalPaymentFailed, resetProposalPaymentToUnpaid } from "@/lib/stripe/fulfillment";
 import { getStripeWebhookSecret, isStripeWebhookConfigured } from "@/lib/stripe/env";
 import { createStripeClient } from "@/lib/stripe/server";
 
@@ -48,7 +48,15 @@ export const Route = createFileRoute("/api/stripe/webhook")({
             const session = event.data.object as Stripe.Checkout.Session;
             const proposalId = session.metadata?.proposal_id;
             if (proposalId) {
-              console.warn("[stripe] async payment failed for proposal", proposalId);
+              await markProposalPaymentFailed(proposalId);
+            }
+          }
+
+          if (event.type === "checkout.session.expired") {
+            const session = event.data.object as Stripe.Checkout.Session;
+            const proposalId = session.metadata?.proposal_id;
+            if (proposalId) {
+              await resetProposalPaymentToUnpaid(proposalId);
             }
           }
         } catch (error) {
