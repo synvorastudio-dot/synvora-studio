@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { isSupabaseServerConfigured } from "@/lib/supabase/env";
 
 // ————————————————————————————————————————————————————————————————
 // Schema — server-side validation of the full project brief
@@ -97,8 +99,6 @@ export const submitProjectBrief = createServerFn({ method: "POST" })
       brief: data,
     };
 
-    // Server-side log so operators can trace new briefs in Cloud logs
-    // until CRM/DB persistence is wired up.
     console.log("[project-brief] submitted", {
       projectId,
       service: data.service.id,
@@ -107,15 +107,31 @@ export const submitProjectBrief = createServerFn({ method: "POST" })
       contactEmail: data.contact.email,
     });
 
-    // ————————————————————————————————————————————————————————
-    // Future integration hooks (intentionally stubbed — not enabled yet)
-    // ————————————————————————————————————————————————————————
-    // TODO(CRM): Persist `payload` to Lovable Cloud table `project_briefs`
-    //            and forward to CRM (HubSpot / Pipedrive / custom).
-    // TODO(EMAIL): Send confirmation email to `data.contact.email` and
-    //              internal notification to the Synvora inbox.
-    // TODO(PDF): Generate branded proposal PDF from `payload` and attach
-    //            a signed download URL to the confirmation email.
+    if (isSupabaseServerConfigured()) {
+      const supabase = createServerSupabaseClient();
+      const { error } = await supabase.from("project_briefs").insert({
+        project_id: projectId,
+        received_at: receivedAt,
+        summary,
+        brief: payload.brief,
+        current_stage_id: "submitted",
+        contact_email: data.contact.email,
+      });
+
+      if (error) {
+        console.error("[project-brief] Supabase insert failed", error);
+        throw new Error("Unable to save your project brief. Please try again.");
+      }
+    } else {
+      console.warn(
+        "[project-brief] Supabase is not configured — brief logged only. " +
+          "Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env.local.",
+      );
+    }
+
+    // TODO(CRM): Forward `payload` to CRM (HubSpot / Pipedrive / custom).
+    // TODO(EMAIL): Send confirmation email to `data.contact.email`.
+    // TODO(PDF): Generate branded proposal PDF from `payload`.
 
     return {
       ok: true as const,

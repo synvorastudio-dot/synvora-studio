@@ -9,9 +9,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { saveProject } from "@/lib/projectStore";
-
-
-
+import { submitProjectBrief } from "@/lib/project-brief.functions";
 // ————————————————————————————————————————————————————————————————
 // Data
 // ————————————————————————————————————————————————————————————————
@@ -162,38 +160,75 @@ export default function ProjectBuilder() {
     contactValid &&
     !submitting;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit || !service || !industry || !complexity || !estimate) return;
 
     setSubmitting(true);
     setSubmitError(null);
     try {
-      // Local-only submission: no backend, no fetch, no API.
-      const now = new Date();
-      const yyyy = now.getFullYear();
-      const mm = String(now.getMonth() + 1).padStart(2, "0");
-      const dd = String(now.getDate()).padStart(2, "0");
-      const rand = Math.floor(1000 + Math.random() * 9000);
-      const projectId = `SYN-${yyyy}${mm}${dd}-${rand}`;
-      const receivedAt = now.toISOString();
-      const summary = "Your Synvora project brief has been generated successfully.";
+      const featurePrice = features.reduce((sum, feature) => sum + feature.add, 0);
+      const featureDays = features.reduce((sum, feature) => sum + feature.days, 0);
+      const min = Math.round(service.basePrice * complexity.mult + featurePrice);
+      const max = Math.round(min * 1.2);
+      const minDays = Math.round((service.minDays + featureDays) * complexity.dayMult);
+      const maxDays = Math.round((service.maxDays + featureDays) * complexity.dayMult);
 
-      // Persist to local project store so /my-project can display the pipeline.
+      const response = await submitProjectBrief({
+        data: {
+          service: {
+            id: service.id,
+            label: service.label,
+            basePrice: service.basePrice,
+            minDays: service.minDays,
+            maxDays: service.maxDays,
+            nextStep: service.nextStep,
+          },
+          industry,
+          features: features.map((feature) => ({
+            id: feature.id,
+            label: feature.label,
+          })),
+          complexity: {
+            id: complexity.id,
+            label: complexity.label,
+          },
+          businessDescription: businessDesc,
+          estimate: {
+            min,
+            max,
+            minDays,
+            maxDays,
+          },
+          contact: {
+            name: contact.name.trim(),
+            email: contact.email.trim(),
+            phone: contact.phone.trim(),
+            company: contact.company.trim(),
+            country: contact.country.trim(),
+            description: contact.description.trim(),
+          },
+        },
+      });
+
       saveProject({
-        projectId,
-        createdAt: receivedAt,
+        projectId: response.projectId,
+        createdAt: response.receivedAt,
         currentStageId: "submitted",
         service: { id: service.id, label: service.label },
         industry,
         complexity: { id: complexity.id, label: complexity.label },
-        features: features.map((f) => ({ id: f.id, label: f.label })),
+        features: features.map((feature) => ({ id: feature.id, label: feature.label })),
         estimate: { startPrice: estimate.startPrice, minD: estimate.minD, maxD: estimate.maxD },
         businessDesc,
         contact: { ...contact },
       });
 
-      setResult({ projectId, receivedAt, summary });
+      setResult({
+        projectId: response.projectId,
+        receivedAt: response.receivedAt,
+        summary: response.summary,
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Something went wrong. Please try again.";
       setSubmitError(message);
