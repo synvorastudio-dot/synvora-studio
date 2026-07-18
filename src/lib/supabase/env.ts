@@ -1,47 +1,77 @@
-const SUPABASE_URL =
-  (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_URL) ||
-  (typeof process !== "undefined" ? process.env.SUPABASE_URL : undefined) ||
-  (typeof process !== "undefined" ? process.env.VITE_SUPABASE_URL : undefined);
+function isServerRuntime(): boolean {
+  return typeof window === "undefined";
+}
 
-const SUPABASE_ANON_KEY =
-  (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_ANON_KEY) ||
-  (typeof process !== "undefined" ? process.env.SUPABASE_ANON_KEY : undefined) ||
-  (typeof process !== "undefined" ? process.env.VITE_SUPABASE_ANON_KEY : undefined);
+function readProcessEnv(name: string): string | undefined {
+  if (typeof process === "undefined") return undefined;
+  const value = process.env[name];
+  return value && value.length > 0 ? value : undefined;
+}
 
-const SUPABASE_SERVICE_ROLE_KEY =
-  typeof process !== "undefined" ? process.env.SUPABASE_SERVICE_ROLE_KEY : undefined;
+function resolveSupabaseUrl(): string | undefined {
+  if (isServerRuntime()) {
+    // Server functions and loaders must use runtime env (Lovable/Nitro injects these).
+    return (
+      readProcessEnv("SUPABASE_URL") ??
+      readProcessEnv("VITE_SUPABASE_URL") ??
+      import.meta.env?.VITE_SUPABASE_URL
+    );
+  }
+
+  return import.meta.env?.VITE_SUPABASE_URL ?? readProcessEnv("VITE_SUPABASE_URL");
+}
+
+function resolveSupabaseAnonKey(): string | undefined {
+  if (isServerRuntime()) {
+    return (
+      readProcessEnv("SUPABASE_ANON_KEY") ??
+      readProcessEnv("VITE_SUPABASE_ANON_KEY") ??
+      import.meta.env?.VITE_SUPABASE_ANON_KEY
+    );
+  }
+
+  return import.meta.env?.VITE_SUPABASE_ANON_KEY ?? readProcessEnv("VITE_SUPABASE_ANON_KEY");
+}
+
+function resolveSupabaseServiceRoleKey(): string | undefined {
+  if (!isServerRuntime()) return undefined;
+  return readProcessEnv("SUPABASE_SERVICE_ROLE_KEY");
+}
 
 export function getSupabaseUrl(): string {
-  if (!SUPABASE_URL) {
+  const url = resolveSupabaseUrl();
+  if (!url) {
     throw new Error(
       "Missing Supabase URL. Set VITE_SUPABASE_URL (and SUPABASE_URL on the server) in .env.local.",
     );
   }
-  return SUPABASE_URL;
+  return url;
 }
 
 export function getSupabaseAnonKey(): string {
-  if (!SUPABASE_ANON_KEY) {
+  const key = resolveSupabaseAnonKey();
+  if (!key) {
     throw new Error(
       "Missing Supabase anon key. Set VITE_SUPABASE_ANON_KEY in .env.local.",
     );
   }
-  return SUPABASE_ANON_KEY;
+  return key;
 }
 
 export function getSupabaseServiceRoleKey(): string {
-  if (!SUPABASE_SERVICE_ROLE_KEY) {
+  const key = resolveSupabaseServiceRoleKey();
+  if (!key) {
     throw new Error(
       "Missing Supabase service role key. Set SUPABASE_SERVICE_ROLE_KEY in .env.local.",
     );
   }
-  return SUPABASE_SERVICE_ROLE_KEY;
+  return key;
 }
 
 export function isSupabaseConfigured(): boolean {
-  return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+  return Boolean(resolveSupabaseUrl() && resolveSupabaseAnonKey());
 }
 
 export function isSupabaseServerConfigured(): boolean {
-  return Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
+  return Boolean(resolveSupabaseUrl() && resolveSupabaseServiceRoleKey());
 }

@@ -23,8 +23,10 @@ import { Route as BlogRouteImport } from './routes/blog'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PortfolioIndexRouteImport } from './routes/portfolio.index'
+import { Route as MyProjectIndexRouteImport } from './routes/my-project.index'
 import { Route as IndustriesIndexRouteImport } from './routes/industries.index'
 import { Route as PortfolioSlugRouteImport } from './routes/portfolio.$slug'
+import { Route as MyProjectProjectIdRouteImport } from './routes/my-project.$projectId'
 import { Route as IndustriesSlugRouteImport } from './routes/industries.$slug'
 import { Route as ApiConsultantRouteImport } from './routes/api/consultant'
 
@@ -98,6 +100,11 @@ const PortfolioIndexRoute = PortfolioIndexRouteImport.update({
   path: '/',
   getParentRoute: () => PortfolioRoute,
 } as any)
+const MyProjectIndexRoute = MyProjectIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MyProjectRoute,
+} as any)
 const IndustriesIndexRoute = IndustriesIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -107,6 +114,11 @@ const PortfolioSlugRoute = PortfolioSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
   getParentRoute: () => PortfolioRoute,
+} as any)
+const MyProjectProjectIdRoute = MyProjectProjectIdRouteImport.update({
+  id: '/$projectId',
+  path: '/$projectId',
+  getParentRoute: () => MyProjectRoute,
 } as any)
 const IndustriesSlugRoute = IndustriesSlugRouteImport.update({
   id: '/$slug',
@@ -126,7 +138,7 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/how-we-work': typeof HowWeWorkRoute
   '/industries': typeof IndustriesRouteWithChildren
-  '/my-project': typeof MyProjectRoute
+  '/my-project': typeof MyProjectRouteWithChildren
   '/portfolio': typeof PortfolioRouteWithChildren
   '/pricing': typeof PricingRoute
   '/services': typeof ServicesRoute
@@ -135,8 +147,10 @@ export interface FileRoutesByFullPath {
   '/why-synvora': typeof WhySynvoraRoute
   '/api/consultant': typeof ApiConsultantRoute
   '/industries/$slug': typeof IndustriesSlugRoute
+  '/my-project/$projectId': typeof MyProjectProjectIdRoute
   '/portfolio/$slug': typeof PortfolioSlugRoute
   '/industries/': typeof IndustriesIndexRoute
+  '/my-project/': typeof MyProjectIndexRoute
   '/portfolio/': typeof PortfolioIndexRoute
 }
 export interface FileRoutesByTo {
@@ -145,7 +159,6 @@ export interface FileRoutesByTo {
   '/blog': typeof BlogRoute
   '/contact': typeof ContactRoute
   '/how-we-work': typeof HowWeWorkRoute
-  '/my-project': typeof MyProjectRoute
   '/pricing': typeof PricingRoute
   '/services': typeof ServicesRoute
   '/solutions': typeof SolutionsRoute
@@ -153,8 +166,10 @@ export interface FileRoutesByTo {
   '/why-synvora': typeof WhySynvoraRoute
   '/api/consultant': typeof ApiConsultantRoute
   '/industries/$slug': typeof IndustriesSlugRoute
+  '/my-project/$projectId': typeof MyProjectProjectIdRoute
   '/portfolio/$slug': typeof PortfolioSlugRoute
   '/industries': typeof IndustriesIndexRoute
+  '/my-project': typeof MyProjectIndexRoute
   '/portfolio': typeof PortfolioIndexRoute
 }
 export interface FileRoutesById {
@@ -165,7 +180,7 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/how-we-work': typeof HowWeWorkRoute
   '/industries': typeof IndustriesRouteWithChildren
-  '/my-project': typeof MyProjectRoute
+  '/my-project': typeof MyProjectRouteWithChildren
   '/portfolio': typeof PortfolioRouteWithChildren
   '/pricing': typeof PricingRoute
   '/services': typeof ServicesRoute
@@ -174,8 +189,10 @@ export interface FileRoutesById {
   '/why-synvora': typeof WhySynvoraRoute
   '/api/consultant': typeof ApiConsultantRoute
   '/industries/$slug': typeof IndustriesSlugRoute
+  '/my-project/$projectId': typeof MyProjectProjectIdRoute
   '/portfolio/$slug': typeof PortfolioSlugRoute
   '/industries/': typeof IndustriesIndexRoute
+  '/my-project/': typeof MyProjectIndexRoute
   '/portfolio/': typeof PortfolioIndexRoute
 }
 export interface FileRouteTypes {
@@ -196,8 +213,10 @@ export interface FileRouteTypes {
     | '/why-synvora'
     | '/api/consultant'
     | '/industries/$slug'
+    | '/my-project/$projectId'
     | '/portfolio/$slug'
     | '/industries/'
+    | '/my-project/'
     | '/portfolio/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -206,7 +225,6 @@ export interface FileRouteTypes {
     | '/blog'
     | '/contact'
     | '/how-we-work'
-    | '/my-project'
     | '/pricing'
     | '/services'
     | '/solutions'
@@ -214,8 +232,10 @@ export interface FileRouteTypes {
     | '/why-synvora'
     | '/api/consultant'
     | '/industries/$slug'
+    | '/my-project/$projectId'
     | '/portfolio/$slug'
     | '/industries'
+    | '/my-project'
     | '/portfolio'
   id:
     | '__root__'
@@ -234,8 +254,10 @@ export interface FileRouteTypes {
     | '/why-synvora'
     | '/api/consultant'
     | '/industries/$slug'
+    | '/my-project/$projectId'
     | '/portfolio/$slug'
     | '/industries/'
+    | '/my-project/'
     | '/portfolio/'
   fileRoutesById: FileRoutesById
 }
@@ -246,7 +268,7 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   HowWeWorkRoute: typeof HowWeWorkRoute
   IndustriesRoute: typeof IndustriesRouteWithChildren
-  MyProjectRoute: typeof MyProjectRoute
+  MyProjectRoute: typeof MyProjectRouteWithChildren
   PortfolioRoute: typeof PortfolioRouteWithChildren
   PricingRoute: typeof PricingRoute
   ServicesRoute: typeof ServicesRoute
@@ -356,6 +378,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PortfolioIndexRouteImport
       parentRoute: typeof PortfolioRoute
     }
+    '/my-project/': {
+      id: '/my-project/'
+      path: '/'
+      fullPath: '/my-project/'
+      preLoaderRoute: typeof MyProjectIndexRouteImport
+      parentRoute: typeof MyProjectRoute
+    }
     '/industries/': {
       id: '/industries/'
       path: '/'
@@ -369,6 +398,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/portfolio/$slug'
       preLoaderRoute: typeof PortfolioSlugRouteImport
       parentRoute: typeof PortfolioRoute
+    }
+    '/my-project/$projectId': {
+      id: '/my-project/$projectId'
+      path: '/$projectId'
+      fullPath: '/my-project/$projectId'
+      preLoaderRoute: typeof MyProjectProjectIdRouteImport
+      parentRoute: typeof MyProjectRoute
     }
     '/industries/$slug': {
       id: '/industries/$slug'
@@ -401,6 +437,20 @@ const IndustriesRouteWithChildren = IndustriesRoute._addFileChildren(
   IndustriesRouteChildren,
 )
 
+interface MyProjectRouteChildren {
+  MyProjectProjectIdRoute: typeof MyProjectProjectIdRoute
+  MyProjectIndexRoute: typeof MyProjectIndexRoute
+}
+
+const MyProjectRouteChildren: MyProjectRouteChildren = {
+  MyProjectProjectIdRoute: MyProjectProjectIdRoute,
+  MyProjectIndexRoute: MyProjectIndexRoute,
+}
+
+const MyProjectRouteWithChildren = MyProjectRoute._addFileChildren(
+  MyProjectRouteChildren,
+)
+
 interface PortfolioRouteChildren {
   PortfolioSlugRoute: typeof PortfolioSlugRoute
   PortfolioIndexRoute: typeof PortfolioIndexRoute
@@ -422,7 +472,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   HowWeWorkRoute: HowWeWorkRoute,
   IndustriesRoute: IndustriesRouteWithChildren,
-  MyProjectRoute: MyProjectRoute,
+  MyProjectRoute: MyProjectRouteWithChildren,
   PortfolioRoute: PortfolioRouteWithChildren,
   PricingRoute: PricingRoute,
   ServicesRoute: ServicesRoute,

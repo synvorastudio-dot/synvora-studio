@@ -1,0 +1,426 @@
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import {
+  AlertCircle,
+  ArrowLeft,
+  ArrowUpRight,
+  Check,
+  Circle,
+  Loader2,
+  RefreshCw,
+  Sparkles,
+} from "lucide-react";
+import {
+  CLIENT_PROJECT_STAGES,
+  getClientStageIndex,
+  getClientStatusLabel,
+  type ProjectBriefRow,
+} from "@/lib/client-project";
+import { getProjectBriefByProjectId } from "@/lib/project-brief-query.functions";
+
+export const Route = createFileRoute("/my-project/$projectId")({
+  loader: async ({ params }) => {
+    const project = await getProjectBriefByProjectId({
+      data: { projectId: params.projectId },
+    });
+    if (!project) throw notFound();
+    return { project };
+  },
+  head: ({ loaderData }) => {
+    const projectId = loaderData?.project.project_id ?? "Project";
+    const title = `${projectId} — My Project — Synvora`;
+    return {
+      meta: [
+        { title },
+        {
+          name: "description",
+          content: "Track your Synvora project through the delivery pipeline.",
+        },
+        { name: "robots", content: "noindex" },
+        { property: "og:title", content: title },
+        {
+          property: "og:description",
+          content: "Track your Synvora project through the delivery pipeline.",
+        },
+      ],
+    };
+  },
+  pendingComponent: ProjectLoading,
+  notFoundComponent: ProjectNotFound,
+  errorComponent: ProjectError,
+  component: ClientProjectDashboard,
+});
+
+function ClientProjectDashboard() {
+  const { project } = Route.useLoaderData() as { project: ProjectBriefRow };
+  const currentIdx = getClientStageIndex(project.current_stage_id);
+  const statusLabel = getClientStatusLabel(project.current_stage_id);
+  const receivedDate = new Date(project.received_at);
+
+  return (
+    <main className="relative pt-28 pb-24 md:pt-32">
+      <div className="container-page">
+        <Link
+          to="/"
+          hash="project-builder"
+          className="inline-flex items-center gap-1.5 rounded-full hairline bg-white/[0.02] px-3 py-1.5 text-[12px] text-muted-foreground transition hover:bg-white/[0.06] hover:text-foreground"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to home
+        </Link>
+
+        <header className="mx-auto mt-8 max-w-3xl text-center md:mt-10">
+          <div className="inline-flex items-center gap-1.5 rounded-full hairline bg-white/[0.03] px-3 py-1 text-[10.5px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
+            <Sparkles className="h-3 w-3 text-[var(--electric)]" />
+            Client Project Dashboard
+          </div>
+          <h1 className="mt-4 font-display text-[30px] leading-tight tracking-[-0.02em] text-gradient sm:text-[38px] md:text-[44px]">
+            Your Synvora Project
+          </h1>
+          <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground md:text-[15px]">
+            A live view of your project as it moves through the Synvora delivery
+            pipeline.
+          </p>
+        </header>
+
+        <div className="mx-auto mt-10 max-w-5xl space-y-6 md:mt-12">
+          {/* Overview */}
+          <section className="relative overflow-hidden rounded-3xl glass-strong p-6 md:p-8">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -top-24 -right-24 h-56 w-56 rounded-full opacity-40 blur-3xl"
+              style={{
+                background:
+                  "radial-gradient(circle, oklch(0.72 0.22 250 / 0.35), transparent 70%)",
+              }}
+            />
+            <div className="relative flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+              <div className="min-w-0">
+                <div className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
+                  Project ID
+                </div>
+                <div className="mt-1.5 break-all font-display text-[20px] tracking-[-0.01em] text-electric-gradient sm:text-[24px] md:text-[26px]">
+                  {project.project_id}
+                </div>
+                <div className="mt-1.5 text-[11.5px] text-muted-foreground">
+                  Submitted{" "}
+                  {receivedDate.toLocaleDateString(undefined, {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}{" "}
+                  at{" "}
+                  {receivedDate.toLocaleTimeString(undefined, {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </div>
+              </div>
+              <StatusPill label={statusLabel} />
+            </div>
+
+            <div className="relative mt-8">
+              <div className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
+                Project Summary
+              </div>
+              <p className="mt-3 text-[14px] leading-relaxed text-foreground/90 md:text-[15px]">
+                {project.summary}
+              </p>
+            </div>
+          </section>
+
+          {/* Progress timeline */}
+          <section className="relative overflow-hidden rounded-3xl glass-strong p-6 md:p-8">
+            <SectionTitle
+              title="Progress Timeline"
+              subtitle="Track every stage from brief to delivery."
+            />
+
+            {/* Desktop horizontal timeline */}
+            <ol className="mt-8 hidden lg:grid lg:grid-cols-6 lg:gap-3">
+              {CLIENT_PROJECT_STAGES.map((stage, i) => {
+                const state =
+                  i < currentIdx ? "done" : i === currentIdx ? "current" : "upcoming";
+                return (
+                  <HorizontalStage key={stage.id} stage={stage} state={state} index={i + 1} />
+                );
+              })}
+            </ol>
+
+            {/* Mobile / tablet vertical timeline */}
+            <ol className="relative mt-6 space-y-4 lg:hidden">
+              {CLIENT_PROJECT_STAGES.map((stage, i) => {
+                const state =
+                  i < currentIdx ? "done" : i === currentIdx ? "current" : "upcoming";
+                const isLast = i === CLIENT_PROJECT_STAGES.length - 1;
+                return (
+                  <StageRow
+                    key={stage.id}
+                    index={i + 1}
+                    stage={stage}
+                    state={state}
+                    isLast={isLast}
+                  />
+                );
+              })}
+            </ol>
+          </section>
+
+          {/* Next steps CTA */}
+          <section className="relative overflow-hidden rounded-3xl glass-strong p-6 text-center md:p-8">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 opacity-60"
+              style={{
+                background:
+                  "radial-gradient(500px circle at 50% 0%, oklch(0.72 0.22 250 / 0.12), transparent 65%)",
+              }}
+            />
+            <div className="relative mx-auto max-w-lg">
+              <h2 className="font-display text-[20px] tracking-[-0.02em] text-foreground md:text-[24px]">
+                What happens next?
+              </h2>
+              <p className="mt-3 text-[13.5px] leading-relaxed text-muted-foreground">
+                Our team will review your brief and prepare a tailored proposal.
+                Bookmark this page — your Project ID is your permanent link to
+                track progress.
+              </p>
+              <Link
+                to="/contact"
+                className="group mt-6 inline-flex items-center gap-1.5 rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black shadow-[0_1px_0_oklch(1_0_0/0.7)_inset,0_10px_30px_-12px_oklch(0.72_0.22_250/0.5)] transition hover:-translate-y-px"
+              >
+                Contact Synvora
+                <ArrowUpRight className="h-3.5 w-3.5 transition group-hover:-translate-y-px group-hover:translate-x-px" />
+              </Link>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function ProjectLoading() {
+  return (
+    <main className="relative flex min-h-[70vh] items-center justify-center pt-28 pb-24">
+      <div className="container-page flex flex-col items-center text-center">
+        <div className="grid h-14 w-14 place-items-center rounded-2xl hairline bg-[var(--surface-elevated)] text-[var(--electric)]">
+          <Loader2 className="h-6 w-6 animate-spin" strokeWidth={1.75} />
+        </div>
+        <h1 className="mt-6 font-display text-[22px] tracking-[-0.02em] text-foreground md:text-[26px]">
+          Loading your project…
+        </h1>
+        <p className="mt-2 max-w-sm text-[13.5px] leading-relaxed text-muted-foreground">
+          Fetching your project details from the Synvora pipeline.
+        </p>
+      </div>
+    </main>
+  );
+}
+
+function ProjectNotFound() {
+  const { projectId } = Route.useParams();
+
+  return (
+    <main className="relative pt-28 pb-24 md:pt-32">
+      <div className="container-page">
+        <div className="mx-auto max-w-lg text-center">
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl hairline bg-[var(--surface-elevated)] text-muted-foreground">
+            <AlertCircle className="h-6 w-6" strokeWidth={1.75} />
+          </div>
+          <h1 className="mt-6 font-display text-[26px] tracking-[-0.02em] text-gradient md:text-[32px]">
+            Project not found
+          </h1>
+          <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground">
+            We couldn&apos;t find a project with ID{" "}
+            <span className="font-mono text-foreground/80">{projectId}</span>.
+            Double-check the link or submit a new brief.
+          </p>
+          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <Link
+              to="/"
+              hash="project-builder"
+              className="group inline-flex items-center gap-1.5 rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black shadow-[0_1px_0_oklch(1_0_0/0.7)_inset,0_10px_30px_-12px_oklch(0.72_0.22_250/0.5)] transition hover:-translate-y-px"
+            >
+              Start a project
+              <ArrowUpRight className="h-3.5 w-3.5 transition group-hover:-translate-y-px group-hover:translate-x-px" />
+            </Link>
+            <Link
+              to="/my-project"
+              className="inline-flex items-center gap-1.5 rounded-full hairline bg-white/[0.03] px-4 py-2.5 text-[13px] text-foreground/85 transition hover:bg-white/[0.08]"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              My Project
+            </Link>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function ProjectError({ error, reset }: { error: Error; reset: () => void }) {
+  return (
+    <main className="relative pt-28 pb-24 md:pt-32">
+      <div className="container-page">
+        <div className="mx-auto max-w-lg text-center">
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl hairline bg-[oklch(0.5_0.2_25/0.08)] text-[oklch(0.85_0.15_25)]">
+            <AlertCircle className="h-6 w-6" strokeWidth={1.75} />
+          </div>
+          <h1 className="mt-6 font-display text-[26px] tracking-[-0.02em] text-foreground md:text-[32px]">
+            Unable to load project
+          </h1>
+          <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground">
+            {error.message ||
+              "Something went wrong while loading your project. Please try again."}
+          </p>
+          <button
+            type="button"
+            onClick={reset}
+            className="mt-8 inline-flex items-center gap-1.5 rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black transition hover:-translate-y-px"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Try again
+          </button>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+/* ————— UI bits ————— */
+
+function StatusPill({ label }: { label: string }) {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-full border border-[color:var(--electric)] bg-[oklch(0.72_0.22_250/0.08)] px-3 py-1 text-[11.5px] font-medium text-foreground shadow-[0_0_24px_-10px_var(--electric)]">
+      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--electric)]" />
+      {label}
+    </span>
+  );
+}
+
+function SectionTitle({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="grid h-8 w-8 place-items-center rounded-lg hairline bg-[var(--surface-elevated)] text-[var(--electric)]">
+        <Sparkles className="h-3.5 w-3.5" />
+      </span>
+      <div>
+        <div className="font-display text-[16px] tracking-[-0.01em] text-foreground">
+          {title}
+        </div>
+        <div className="mt-0.5 text-[12px] text-muted-foreground">{subtitle}</div>
+      </div>
+    </div>
+  );
+}
+
+function StageRow({
+  index,
+  stage,
+  state,
+  isLast,
+}: {
+  index: number;
+  stage: (typeof CLIENT_PROJECT_STAGES)[number];
+  state: "done" | "current" | "upcoming";
+  isLast: boolean;
+}) {
+  const dot =
+    state === "done"
+      ? "border-[color:var(--electric)] bg-[var(--electric)] text-black"
+      : state === "current"
+        ? "border-[color:var(--electric)] bg-[oklch(0.72_0.22_250/0.15)] text-[var(--electric)] shadow-[0_0_24px_-6px_var(--electric)]"
+        : "border-[var(--hairline-strong)] bg-[var(--surface)] text-muted-foreground";
+
+  return (
+    <li className="relative flex gap-4">
+      <div className="flex flex-col items-center">
+        <span
+          className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border transition ${dot}`}
+        >
+          {state === "done" ? (
+            <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+          ) : (
+            <Circle className="h-2 w-2 fill-current" strokeWidth={0} />
+          )}
+        </span>
+        {!isLast && <span className="mt-1 w-px flex-1 bg-[var(--hairline)]" />}
+      </div>
+      <div
+        className={`flex-1 rounded-2xl border p-4 transition ${
+          state === "current"
+            ? "border-[color:var(--electric)] bg-[oklch(0.72_0.22_250/0.05)]"
+            : "border-[var(--hairline)] bg-[var(--surface)]"
+        } ${isLast ? "" : "mb-1"}`}
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <div className="font-display text-[14.5px] tracking-[-0.01em] text-foreground">
+            <span className="text-muted-foreground">0{index}.</span> {stage.label}
+          </div>
+          <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+            {state === "done"
+              ? "Completed"
+              : state === "current"
+                ? "In progress"
+                : "Upcoming"}{" "}
+            · {stage.duration}
+          </span>
+        </div>
+        <p className="mt-1.5 text-[13px] leading-relaxed text-foreground/80">
+          {stage.description}
+        </p>
+      </div>
+    </li>
+  );
+}
+
+function HorizontalStage({
+  index,
+  stage,
+  state,
+}: {
+  index: number;
+  stage: (typeof CLIENT_PROJECT_STAGES)[number];
+  state: "done" | "current" | "upcoming";
+}) {
+  const dot =
+    state === "done"
+      ? "border-[color:var(--electric)] bg-[var(--electric)] text-black"
+      : state === "current"
+        ? "border-[color:var(--electric)] bg-[oklch(0.72_0.22_250/0.15)] text-[var(--electric)] shadow-[0_0_24px_-6px_var(--electric)]"
+        : "border-[var(--hairline-strong)] bg-[var(--surface)] text-muted-foreground";
+
+  return (
+    <li
+      className={`flex flex-col rounded-2xl border p-4 transition ${
+        state === "current"
+          ? "border-[color:var(--electric)] bg-[oklch(0.72_0.22_250/0.05)]"
+          : "border-[var(--hairline)] bg-[var(--surface)]"
+      }`}
+    >
+      <span
+        className={`grid h-8 w-8 place-items-center rounded-full border ${dot}`}
+      >
+        {state === "done" ? (
+          <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+        ) : (
+          <Circle className="h-2 w-2 fill-current" strokeWidth={0} />
+        )}
+      </span>
+      <div className="mt-3 font-display text-[13px] tracking-[-0.01em] text-foreground">
+        <span className="text-muted-foreground">0{index}.</span> {stage.label}
+      </div>
+      <p className="mt-1.5 flex-1 text-[11.5px] leading-relaxed text-foreground/75">
+        {stage.description}
+      </p>
+      <span className="mt-3 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+        {state === "done"
+          ? "Done"
+          : state === "current"
+            ? "In progress"
+            : "Upcoming"}
+      </span>
+    </li>
+  );
+}

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
   ArrowRight,
@@ -100,6 +100,7 @@ const EMPTY_CONTACT: Contact = {
 const TOTAL_STEPS = 6;
 
 export default function ProjectBuilder() {
+  const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [serviceId, setServiceId] = useState<string | null>(null);
   const [industry, setIndustry] = useState<string | null>(null);
@@ -110,11 +111,6 @@ export default function ProjectBuilder() {
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [result, setResult] = useState<{
-    projectId: string;
-    receivedAt: string;
-    summary: string;
-  } | null>(null);
 
 
   const service = useMemo(() => SERVICES.find((s) => s.id === serviceId) ?? null, [serviceId]);
@@ -224,10 +220,9 @@ export default function ProjectBuilder() {
         contact: { ...contact },
       });
 
-      setResult({
-        projectId: response.projectId,
-        receivedAt: response.receivedAt,
-        summary: response.summary,
+      await navigate({
+        to: "/my-project/$projectId",
+        params: { projectId: response.projectId },
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Something went wrong. Please try again.";
@@ -246,7 +241,6 @@ export default function ProjectBuilder() {
     setComplexityId(null);
     setBusinessDesc("");
     setContact(EMPTY_CONTACT);
-    setResult(null);
     setSubmitError(null);
   };
 
@@ -256,115 +250,6 @@ export default function ProjectBuilder() {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
-
-
-
-  // ——— Success screen ————————————————————————————————————————————
-  if (result && service && complexity && estimate && industry) {
-    return (
-      <div className="relative overflow-hidden rounded-3xl glass-strong p-6 md:p-10">
-        <AmbientWash />
-
-        <div className="relative mx-auto max-w-2xl">
-          {/* Header */}
-          <div className="text-center">
-            <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl hairline bg-[var(--surface-elevated)] text-[var(--electric)] shadow-[0_0_40px_-8px_var(--electric)]">
-              <Check className="h-6 w-6" strokeWidth={1.75} />
-            </div>
-            <h3 className="mt-6 font-display text-[26px] leading-tight tracking-[-0.02em] text-gradient md:text-[32px]">
-              Your project has been created.
-            </h3>
-          </div>
-
-          {/* Project ID card */}
-          <div className="mt-8 rounded-2xl hairline bg-[var(--surface)] px-5 py-4 text-center">
-            <div className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
-              Project ID
-            </div>
-            <div className="mt-1.5 font-display text-[20px] tracking-[-0.01em] text-electric-gradient md:text-[22px]">
-              {result.projectId}
-            </div>
-            <div className="mt-1 text-[11.5px] text-muted-foreground">
-              Received {new Date(result.receivedAt).toLocaleString()}
-            </div>
-          </div>
-
-          {/* Confirmation */}
-          <p className="mt-6 text-center text-[14px] leading-relaxed text-foreground/90">
-            Your Synvora project brief has been generated successfully.
-          </p>
-
-          {/* Project overview */}
-          <div className="mt-5 rounded-2xl hairline bg-[var(--surface)] p-5">
-            <div className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
-              Project overview
-            </div>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <ProposalRow k="Service"           v={service.label} />
-              <ProposalRow k="Industry"          v={industry} />
-              <ProposalRow k="Complexity"        v={complexity.label} />
-              <ProposalRow k="Selected features" v={features.length ? features.map((f) => f.label).join(", ") : "None"} />
-              <ProposalRow k="Estimated timeline" v={`${estimate.minD}–${estimate.maxD} days`} highlight />
-              <ProposalRow k="Estimated budget"   v={`From €${estimate.startPrice.toLocaleString("en-US")}`} highlight />
-            </div>
-          </div>
-
-          {/* Contact */}
-          <div className="mt-5 rounded-2xl hairline bg-[var(--surface)] p-5">
-            <div className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
-              Contact
-            </div>
-            <div className="mt-2 grid gap-1.5 text-[13.5px] text-foreground/90 sm:grid-cols-2">
-              <div>{contact.name}</div>
-              <div>{contact.email}</div>
-              {contact.phone   && <div>{contact.phone}</div>}
-              {contact.company && <div>{contact.company}</div>}
-              {contact.country && <div className="sm:col-span-2">{contact.country}</div>}
-            </div>
-          </div>
-
-          {/* Next step */}
-          <div className="mt-5 rounded-2xl hairline bg-white/[0.02] p-5">
-            <div className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
-              Next step
-            </div>
-            <p className="mt-2 text-[13.5px] leading-relaxed text-foreground/90">
-              The next automation layer will connect this brief to proposal generation, CRM and email confirmation.
-            </p>
-          </div>
-
-
-          {/* Actions */}
-          <div className="mt-8 flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-center sm:justify-center">
-            <button
-              type="button"
-              onClick={reset}
-              className="inline-flex items-center justify-center gap-1.5 rounded-full hairline bg-white/[0.03] px-4 py-2.5 text-[13px] text-foreground/85 transition hover:bg-white/[0.08]"
-            >
-              Create another brief
-              <ArrowRight className="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={returnHome}
-              className="inline-flex items-center justify-center gap-1.5 rounded-full hairline bg-white/[0.03] px-4 py-2.5 text-[13px] text-foreground/85 transition hover:bg-white/[0.08]"
-            >
-              Return to Homepage
-            </button>
-            <Link
-              to="/my-project"
-              className="group inline-flex items-center justify-center gap-1.5 rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black shadow-[0_1px_0_oklch(1_0_0/0.7)_inset,0_10px_30px_-12px_oklch(0.72_0.22_250/0.5)] transition hover:-translate-y-px"
-            >
-              View My Project
-              <ArrowUpRight className="h-3.5 w-3.5 transition group-hover:-translate-y-px group-hover:translate-x-px" />
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-
 
   // ——— Builder ————————————————————————————————————————————————
   return (
